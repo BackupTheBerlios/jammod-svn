@@ -31,89 +31,94 @@
 #include <unistd.h>
 
 #include <asm/unistd.h>
+#include "gfp.h"
 
 #include "jammod.h"
 
-/* the syscall we'll use for comunication and kmalloc() */
-#define	OURCALL oldolduname
-#define	OURSYS __NR_oldolduname
-#define __NR_OURSYS OURSYS
-#define __NR_OURCALL OURSYS
-
+#define STT_OBJECT 1
 #define STT_FUNC 2
-
-#define ERR(x) ((ulong) x > 0xfffff000)
-
-int query_module(const char *name, int which,
-                 void *buf, size_t bufsize, size_t *ret);
-
-ulong old80;
 
 int main(int argc, char **argv) {
     int fd, ret;
     ulong sct;
-    ulong kmalloc, gfp;
-    ulong oldsys;
     unsigned char *module;
+    size_t module_size;
+    unsigned base, entry;
+    ssize_t nbytes;
 
     if (argc != 2) {
         fprintf(stderr, "usage: jammod filename\n");
         exit(1);
     }
 
+    /* initialize */
     ret = init_symbols();
     if (ret < 0) {
         fputs("jammod: failed to load kernel symbol table\n", stderr);
         exit(1);
     }
 
-    module = loadfile(argv[1]);
+    /* load file, check ELF format */
+    module = loadfile(argv[1], &module_size);
     if (module == NULL) {
         fprintf(stderr, "jammod: failed to load %s: %s\n",
                 argv[1], strerror(errno));
         exit(1);
     }
 
-    ret = elf_relocate(module, 0);
-    if (ret < 0) {
-        fputs("jammod: failed to resolve\n", stderr);
-        exit(1);
-    }
-
-    elf_get_symbol(module, 0, "test", STT_FUNC);
-
+    /* open kernel */
     fd = open_kmem();
     if (fd < 0) {
-        printf("FUCK: Can't open kmem for read/write (%d)\n", -fd);
+        fprintf(stderr, "jammod: failed to kmem: %s\n", strerror(errno));
         return 1;
     }
 
     sct = get_symbol('D', "sys_call_table");
-    if (!sct) {
-        printf("FUCK: Can't find sys_call_table[]\n");
-        close(fd);
-        return 1;
+    if (sct == 0) {
+        fputs("jammod: symbol 'sys_call_table' not found in kernel\n", stderr);
+        exit(1);
     }
 
-    printf("sct[]=0x%08x, ", (uint) sct);
-
-    kmalloc = get_symbol_ex('T', "kmalloc", "_kmalloc", "__kmalloc");
-    if (!kmalloc) {
-        printf("FUCK: Can't find kmalloc()!\n");
-        close(fd);
-        return 1;
+    /* write module to kernel space */
+    base = kmalloc(fd, sct, module_size, GFP_KERNEL);
+    if (base == 0) {
+        fprintf(stderr, "jammod: failed to kmalloc(%u)\n", module_size);
     }
 
-    printf("kmalloc()=0x%08x, gfp=0x%x\n", (uint) kmalloc, (uint) gfp);
+    fprintf(stderr, "kmalloc returned 0x%08x\n", base);
 
-    if (ERR(rkml(fd, &oldsys, sct + OURSYS * 4))) {
-        printf("FUCK: Can't read syscall %d addr\n", OURSYS);
-        close(fd);
-        return 1;
+    ret = elf_relocate(module, base);
+    if (ret < 0) {
+        fputs("jammod: failed to relocate\n", stderr);
+        exit(1);
     }
 
-    wkml(fd, kmalloc, sct + OURSYS * 4);
+    nbytes = wkm(fd, module, module_size, base);
+    if (nbytes < (ssize_t)module_size) {
+        kfree(fd, sct, base);
+        fprintf(stderr, "jammod: failed to copy module to kernel: %s\n",
+                strerror(errno));
+        exit(1);
+    }
 
-    /*kmalloc = (ulong) get_kma(fd, sct & 0xff000000, &gfp, get_kma_hint());*/
+    /* init_module */
+    entry = elf_get_symbol(module, base, "init_module", STT_FUNC);
+    if (entry == 0) {
+        kfree(fd, sct, base);
+        fputs("jammod: symbol 'init_module' not found in module\n", stderr);
+        exit(1);
+    }
 
+    fprintf(stderr, "init_module = 0x%08x\n", entry);
+
+    ret = init_module(fd, sct, entry);
+    if (ret < 0) {
+        fprintf(stderr, "jammod: module's init_module failed, return code %d\n",
+                ret);
+        kfree(fd, sct, base);
+        exit(1);
+    }
+
+    fprintf(stderr, "jammod: module loaded successfully\n");
+    return 0;
 }

@@ -30,7 +30,7 @@
 
 #include "jammod.h"
 
-unsigned char *loadfile(const char *path) {
+unsigned char *loadfile(const char *path, size_t *sizep) {
     int fd, ret;
     struct stat st;
     unsigned char *buffer;
@@ -63,5 +63,6 @@ unsigned char *loadfile(const char *path) {
 
     close(fd);
 
+    *sizep = st.st_size;
     return buffer;
 }

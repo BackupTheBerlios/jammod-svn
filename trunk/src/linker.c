@@ -43,13 +43,12 @@ static int relocate_rel(unsigned char *data, unsigned offset,
                         const Elf32_Sym *sym,
                         const char *strtab) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    unsigned *p = (unsigned*)(data + rel_progbits->sh_offset + rel->r_offset);
+    unsigned address = rel_progbits->sh_offset + rel->r_offset;
+    unsigned *p = (unsigned*)(data + address);
     unsigned value;
     char symbol_char;
     const char *name;
     Elf32_Shdr *shdr;
-
-    fprintf(stderr, "rel: ST_TYPE = %u\n", ELF32_ST_TYPE(sym->st_info));
 
     switch (ELF32_ST_TYPE(sym->st_info)) {
     case STT_NOTYPE:
@@ -73,10 +72,19 @@ static int relocate_rel(unsigned char *data, unsigned offset,
 
         /* resolve the symbol using kernel symbol table */
         value = get_symbol(symbol_char, name);
+
+        /* XXX oh no, badly hacked. */
+        if (value == 0 && symbol_char == 'D')
+            value = get_symbol('B', name);
+        if (value == 0 && symbol_char == 'D')
+            value = get_symbol('T', name);
+
         if (value == 0) {
             fprintf(stderr, "cannot to resolve %s\n", name);
             return -1;
         }
+
+        fprintf(stderr, "relocated %s -> 0x%08x\n", name, value);
 
         break;
 
@@ -87,6 +95,7 @@ static int relocate_rel(unsigned char *data, unsigned offset,
             fprintf(stderr, "sym->st_shndx out of bounds\n");
             return -1;
         }
+
         shdr = (Elf32_Shdr*)(data + hdr->e_shoff +
                              sym->st_shndx * hdr->e_shentsize);
 
@@ -95,6 +104,13 @@ static int relocate_rel(unsigned char *data, unsigned offset,
 
     case STT_OBJECT:
     case STT_FUNC:
+        if (sym->st_shndx >= hdr->e_shnum) {
+            fprintf(stderr, "sym->st_shndx out of bounds\n");
+            return -1;
+        }
+
+        shdr = (Elf32_Shdr*)(data + hdr->e_shoff +
+                             sym->st_shndx * hdr->e_shentsize);
         value = offset + shdr->sh_offset + sym->st_value;
         break;
 
@@ -104,7 +120,14 @@ static int relocate_rel(unsigned char *data, unsigned offset,
     }
 
     /* relocate it! */
-    *p = value;
+    if (ELF32_R_TYPE(rel->r_info) == R_386_PC32) {
+        /* this must be a relative address */
+        fprintf(stderr, "REL: PC32, old value = 0x%08x offset=0x%08x address=0x%08x *p=0x%08x\n", value, offset, address, *p);
+        value -= offset + address;
+        fprintf(stderr, "REL: PC32, new value = 0x%08x\n", value);
+    }
+
+    *p += value;
 
     return 0;
 }
@@ -139,6 +162,7 @@ int elf_relocate(unsigned char *data, unsigned offset) {
     Elf32_Sym *sym = NULL;
     unsigned rel_count, sym_count;
     char *strtab = NULL;
+    int ret;
 
     /* verify ELF header */
     if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0 ||
@@ -153,6 +177,19 @@ int elf_relocate(unsigned char *data, unsigned offset) {
     for (z = 0; z < hdr->e_shnum; z++) {
         Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize);
         switch (shdr->sh_type) {
+        case SHT_SYMTAB:
+            sym = (Elf32_Sym*)(data + shdr->sh_offset);
+            sym_count = shdr->sh_size / sizeof(*sym);
+            break;
+        case SHT_STRTAB:
+            strtab = (char*)(data + shdr->sh_offset);
+            break;
+        }
+    }
+
+    for (z = 0; z < hdr->e_shnum; z++) {
+        Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize);
+        switch (shdr->sh_type) {
         case SHT_PROGBITS:
             progbits_shdr = shdr;
             break;
@@ -162,39 +199,22 @@ int elf_relocate(unsigned char *data, unsigned offset) {
                 continue;
             }
                 
-            fprintf(stderr, "rel!\n");
-
             rel_progbits = progbits_shdr;
             rel = (Elf32_Rel*)(data + shdr->sh_offset);
             rel_count = shdr->sh_size / sizeof(*rel);
-            fprintf(stderr, "rel_count=%u\n", rel_count);
+
+            ret = do_relocate(data, offset,
+                              rel, rel_count, rel_progbits,
+                              sym, sym_count,
+                              strtab);
+            if (ret < 0)
+                return -1;
 
             break;
-        case SHT_SYMTAB:
-            fprintf(stderr, "symtab.\n");
-            sym = (Elf32_Sym*)(data + shdr->sh_offset);
-            sym_count = shdr->sh_size / sizeof(*sym);
-            fprintf(stderr, "sym_count=%u\n", sym_count);
-            break;
-        case SHT_STRTAB:
-            fprintf(stderr, "strtab.\n");
-            strtab = (char*)(data + shdr->sh_offset);
-            break;
-        default:
-            fprintf(stderr, "section %u\n", shdr->sh_type);
         }
     }
 
-    if (rel == NULL)
-        return 0;
-
-    if (sym == NULL)
-        return -1;
-
-    return do_relocate(data, offset,
-                       rel, rel_count, rel_progbits,
-                       sym, sym_count,
-                       strtab);
+    return 0;
 }
 
 unsigned elf_get_symbol(unsigned char *data, unsigned offset,
@@ -214,10 +234,8 @@ unsigned elf_get_symbol(unsigned char *data, unsigned offset,
     /* find strtab */
     for (z = 0; z < hdr->e_shnum; z++) {
         Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize);
-        if (shdr->sh_type == SHT_STRTAB) {
+        if (shdr->sh_type == SHT_STRTAB)
             strtab = (char*)(data + shdr->sh_offset);
-            break;
-        }
     }
 
     if (strtab == NULL)
@@ -245,9 +263,9 @@ unsigned elf_get_symbol(unsigned char *data, unsigned offset,
                 shdr2 = (Elf32_Shdr*)(data + hdr->e_shoff +
                                       sym->st_shndx * hdr->e_shentsize);
 
-                fprintf(stderr, "get_symbol %s: shdr->sh_offset=%u\n", name, shdr->sh_offset);
+                fprintf(stderr, "get_symbol %s: shdr2->sh_offset=%u sym->st_value=%u\n", name, shdr2->sh_offset, sym->st_value);
 
-                return offset + shdr->sh_offset + sym->st_value;
+                return offset + shdr2->sh_offset + sym->st_value;
             }
         }
     }

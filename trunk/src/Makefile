@@ -10,10 +10,12 @@ all: jammod test.o
 clean:
 	rm -f jammod *.o
 
-jammod: main.c symbols.c loadfile.c linker.c kmem.c
+jammod: main.c symbols.c loadfile.c linker.c kmem.c kmalloc.c module.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 test.o: test.c
 	$(CC) -c $(CFLAGS) -DMODULE -D__KERNEL__ -o $@ $^
 	strip --strip-debug $@
 
+test.S: test.c
+	$(CC) -S -c $(CFLAGS) -DMODULE -D__KERNEL__ -o $@ $^
