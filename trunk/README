@@ -49,24 +49,22 @@ On the target host, you need:
 - a kernel module which is ABI compatible to the running kernel
 - the jammod binary
 
-The "ABI compatible" should be the hardest part here - the Linux
-kernel hackers change the ABI more often than their underwear. If you
+[The "ABI compatible" should be the hardest part here - the Linux
+kernel hackers change parts of the module ABI quite often. If you
 compile your module including kernel headers of the same kernel
 version with a similar configuration, chances are very good that the
 binary is compatible.
 
 I have not implemented support for kernels older than 2.4.10 - anybody
-really interested?
+really interested?]
 
-
-Now run the following command:
+Run the following command:
 
  jammod -m /boot/System.map mymodule.ko
 
 (Try the modules in the "samples" directory)
 
-Be careful, if you specify the wrong System.map, the machine will
-crash!
+Be careful, if you use the wrong System.map, the machine will crash!
 
 Unloading modules is impossible with jammod. Try lsmod - the module
 will not show up! For this reason, jammod can not check if the module
@@ -111,13 +109,6 @@ jammod homepage
 
 SucKIT download site
   http://hysteria.sk/sd/f/suckit/
-
-
-Greetings
----------
-
-Greetings to my friend MocI with whom I sat in a bar in Cologne
-drinking cocktails, while I had the idea to write this program.
 
 
 The usual legal blah blah
