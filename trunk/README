@@ -63,6 +63,8 @@ Now run the following command:
 
  jammod -m /boot/System.map mymodule.ko
 
+(Try the modules in the "samples" directory)
+
 Be careful, if you specify the wrong System.map, the machine will
 crash!
 
