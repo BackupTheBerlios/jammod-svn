@@ -63,12 +63,10 @@ static int relocate_rel(unsigned char *data, unsigned offset,
             return -1;
         }
 
-        fprintf(stderr, "relocated %s -> 0x%08x\n", name, value);
-
         break;
 
     case STT_SECTION:
-        /* local symbol */
+        /* local symbol I */
 
         if (sym->st_shndx >= hdr->e_shnum) {
             fprintf(stderr, "sym->st_shndx out of bounds\n");
@@ -83,6 +81,8 @@ static int relocate_rel(unsigned char *data, unsigned offset,
 
     case STT_OBJECT:
     case STT_FUNC:
+        /* local symbol II */
+
         if (sym->st_shndx >= hdr->e_shnum) {
             fprintf(stderr, "sym->st_shndx out of bounds\n");
             return -1;
@@ -98,31 +98,31 @@ static int relocate_rel(unsigned char *data, unsigned offset,
         return -1;
     }
 
-    /* relocate it! */
     if (ELF32_R_TYPE(rel->r_info) == R_386_PC32) {
-        /* this must be a relative address */
-        fprintf(stderr, "REL: PC32, old value = 0x%08x offset=0x%08x address=0x%08x *p=0x%08x\n", value, offset, address, *p);
+        /* convert to relative address */
         value -= offset + address;
-        fprintf(stderr, "REL: PC32, new value = 0x%08x\n", value);
     }
 
+    /* relocate it */
     *p += value;
 
     return 0;
 }
 
-static int do_relocate(unsigned char *data, unsigned offset,
-                       const Elf32_Rel *rel, unsigned rel_count,
-                       Elf32_Shdr *rel_progbits,
-                       const Elf32_Sym *sym, unsigned sym_count,
-                       const char *strtab) {
+static int relocate_rel_array(unsigned char *data, unsigned offset,
+                              const Elf32_Rel *rel, unsigned rel_count,
+                              Elf32_Shdr *rel_progbits,
+                              const Elf32_Sym *sym, unsigned sym_count,
+                              const char *strtab) {
     int ret;
 
     for (; rel_count > 0; rel_count--, rel++) {
         Elf32_Word sym_index = ELF32_R_SYM(rel->r_info);
 
-        if (sym_index >= sym_count)
+        if (sym_index >= sym_count) {
+            fputs("sym_index out of bounds\n", stderr);
             return -1;
+        }
 
         ret = relocate_rel(data, offset, rel, rel_progbits,
                            sym + sym_index, strtab);
@@ -182,10 +182,10 @@ int elf_relocate(unsigned char *data, unsigned offset) {
             rel = (Elf32_Rel*)(data + shdr->sh_offset);
             rel_count = shdr->sh_size / sizeof(*rel);
 
-            ret = do_relocate(data, offset,
-                              rel, rel_count, rel_progbits,
-                              sym, sym_count,
-                              strtab);
+            ret = relocate_rel_array(data, offset,
+                                     rel, rel_count, rel_progbits,
+                                     sym, sym_count,
+                                     strtab);
             if (ret < 0)
                 return -1;
 
@@ -241,8 +241,6 @@ unsigned elf_get_symbol(unsigned char *data, unsigned offset,
                 }
                 shdr2 = (Elf32_Shdr*)(data + hdr->e_shoff +
                                       sym->st_shndx * hdr->e_shentsize);
-
-                fprintf(stderr, "get_symbol %s: shdr2->sh_offset=%u sym->st_value=%u\n", name, shdr2->sh_offset, sym->st_value);
 
                 return offset + shdr2->sh_offset + sym->st_value;
             }

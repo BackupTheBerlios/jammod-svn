@@ -85,8 +85,6 @@ int main(int argc, char **argv) {
         fprintf(stderr, "jammod: failed to kmalloc(%u)\n", module_size);
     }
 
-    fprintf(stderr, "kmalloc returned 0x%08x\n", base);
-
     ret = elf_relocate(module, base);
     if (ret < 0) {
         fputs("jammod: failed to relocate\n", stderr);
@@ -108,8 +106,6 @@ int main(int argc, char **argv) {
         fputs("jammod: symbol 'init_module' not found in module\n", stderr);
         exit(1);
     }
-
-    fprintf(stderr, "init_module = 0x%08x\n", entry);
 
     ret = init_module(fd, sct, entry);
     if (ret < 0) {
