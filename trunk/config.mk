@@ -5,6 +5,6 @@
 PREFIX = /usr/local
 
 CC = gcc
-CFLAGS = -g -O0
+CFLAGS = -O3
 
 KERNEL_HEADERS = /usr/src/linux/include

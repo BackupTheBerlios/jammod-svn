@@ -6,7 +6,7 @@ CFLAGS += -isystem $(KERNEL_HEADERS) -D_GNU_SOURCE -std=gnu99
 CFLAGS += -W -Wall -Wmissing-prototypes -Wwrite-strings -Wcast-qual -Wfloat-equal -Wshadow -Wpointer-arith -Wbad-function-cast -Wsign-compare -Waggregate-return -Wmissing-declarations -Wmissing-noreturn -Wmissing-format-attribute -Wredundant-decls -Wnested-externs -Winline -Wdisabled-optimization -Wno-long-long -Wstrict-prototypes -Wundef -pedantic
 CFLAGS += -DMODULE -D__KERNEL__
 
-all: test.ko param.ko
+all: test.ko param.ko capall.ko
 
 clean:
 	rm -f *.ko

@@ -2,7 +2,7 @@
  * kmem.c
  * $Id$
  *
- * Access to /dev/kmem.
+ * Access to /dev/kmem. Some of this was copied from SucKIT.
  *
  * (c) 2003-2004 Max Kellermann (max@linuxtag.org)
  *
