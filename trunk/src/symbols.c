@@ -35,7 +35,7 @@ struct symbol {
 };
 
 static struct symbol *symbols;
-unsigned symbol_count;
+static unsigned symbol_count;
 
 int init_symbols(void) {
     FILE *file;
@@ -48,11 +48,13 @@ int init_symbols(void) {
     size = 1024;
     symbols = malloc(size * sizeof(*symbols));
 
+    /* XXX: don't hardcode */
     file = fopen("/boot/System.map-2.6.0", "r");
     if (file == NULL)
         return -1;
 
     while (!feof(file)) {
+        /* parse line */
         memset(&symbol, 0, sizeof(symbol));
         ret = fscanf(file, "%x %c %127s\n",
                      &symbol.address, &symbol.type,
@@ -62,6 +64,7 @@ int init_symbols(void) {
 
         symbol.name = strdup(name);
 
+        /* add symbol to array */
         if (symbol_count >= size) {
             size += 1024;
             symbols = realloc(symbols, size * sizeof(*symbols));
@@ -78,25 +81,36 @@ int init_symbols(void) {
 }
 
 unsigned get_symbol(char type, const char *name) {
-    unsigned z;
+    unsigned z, weak_value = 0;
 
     for (z = 0; z < symbol_count; z++) {
-        if (symbols[z].type == type &&
-            strcmp(symbols[z].name, name) == 0)
-            return symbols[z].address;
+        if ((type == 0 || symbols[z].type == type) &&
+            strcmp(symbols[z].name, name) == 0) {
+            if (type == 0 && symbols[z].type == 'W') {
+                /* weak symbol - store but continue the search for
+                   strong symbol */
+                weak_value = symbols[z].address;
+            } else {
+                /* strong symbol found */
+                return symbols[z].address;
+            }
+        }
     }
 
-    return 0;
+    /* no strong symbol found - return weak symbol (if present) */
+    return weak_value;
 }
 
 unsigned get_symbol_ex(char type, const char *name, ...) {
     va_list ap;
     unsigned addr;
 
+    /* try first name */
     addr = get_symbol(type, name);
     if (addr)
         return addr;
 
+    /* try other names until NULL argument is found */
     va_start(ap, name);
     while ((name = va_arg(ap, const char*)) != NULL) {
         addr = get_symbol(type, name);
@@ -105,5 +119,6 @@ unsigned get_symbol_ex(char type, const char *name, ...) {
     }
     va_end(ap);
 
+    /* nothing found */
     return 0;
 }

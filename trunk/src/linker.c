@@ -46,7 +46,6 @@ static int relocate_rel(unsigned char *data, unsigned offset,
     unsigned address = rel_progbits->sh_offset + rel->r_offset;
     unsigned *p = (unsigned*)(data + address);
     unsigned value;
-    char symbol_char;
     const char *name;
     Elf32_Shdr *shdr;
 
@@ -54,31 +53,11 @@ static int relocate_rel(unsigned char *data, unsigned offset,
     case STT_NOTYPE:
         /* symbol from kernel */
 
-        /* function or variable? */
-        switch (ELF32_R_TYPE(rel->r_info)) {
-        case R_386_32:
-            symbol_char = 'D';
-            break;
-        case R_386_PC32:
-            symbol_char = 'T';
-            break;
-        default:
-            fprintf(stderr, "unkown R_TYPE: %d\n", ELF32_R_TYPE(rel->r_info));
-            return -1;
-        }
-
         /* get symbol name */
         name = strtab + sym->st_name;
 
         /* resolve the symbol using kernel symbol table */
-        value = get_symbol(symbol_char, name);
-
-        /* XXX oh no, badly hacked. */
-        if (value == 0 && symbol_char == 'D')
-            value = get_symbol('B', name);
-        if (value == 0 && symbol_char == 'D')
-            value = get_symbol('T', name);
-
+        value = get_symbol(0, name);
         if (value == 0) {
             fprintf(stderr, "cannot to resolve %s\n", name);
             return -1;
