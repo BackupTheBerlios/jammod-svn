@@ -46,12 +46,12 @@ static void usage(void) {
 }
 
 int main(int argc, char **argv) {
-    int z, fd, ret;
+    int z, ret;
     ulong sct;
     char *module_path = NULL, *system_map_path = NULL;
     unsigned char *module;
     size_t module_size;
-    unsigned base, entry;
+    address_t base, entry;
     ssize_t nbytes;
 
     /* mini-getopt */
@@ -108,9 +108,10 @@ int main(int argc, char **argv) {
     }
 
     /* open kernel */
-    fd = open_kmem();
-    if (fd < 0) {
-        fprintf(stderr, "jammod: failed to kmem: %s\n", strerror(errno));
+    ret = init_kmem();
+    if (ret < 0) {
+        fprintf(stderr, "jammod: failed to open /dev/kmem: %s\n",
+                strerror(errno));
         return 1;
     }
 
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
     }
 
     /* write module to kernel space */
-    base = kmalloc(fd, sct, module_size, GFP_KERNEL);
+    base = kmalloc(sct, module_size, GFP_KERNEL);
     if (base == 0) {
         fprintf(stderr, "jammod: failed to kmalloc(%u)\n", module_size);
     }
@@ -132,9 +133,9 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    nbytes = wkm(fd, module, module_size, base);
+    nbytes = wkm(base, module, module_size);
     if (nbytes < (ssize_t)module_size) {
-        kfree(fd, sct, base);
+        kfree(sct, base);
         fprintf(stderr, "jammod: failed to copy module to kernel: %s\n",
                 strerror(errno));
         exit(1);
@@ -143,16 +144,16 @@ int main(int argc, char **argv) {
     /* init_module */
     entry = elf_get_symbol(module, base, "init_module", STT_FUNC);
     if (entry == 0) {
-        kfree(fd, sct, base);
+        kfree(sct, base);
         fputs("jammod: symbol 'init_module' not found in module\n", stderr);
         exit(1);
     }
 
-    ret = init_module(fd, sct, entry);
+    ret = init_module(sct, entry);
     if (ret < 0) {
         fprintf(stderr, "jammod: module's init_module failed, return code %d\n",
                 ret);
-        kfree(fd, sct, base);
+        kfree(sct, base);
         exit(1);
     }
 

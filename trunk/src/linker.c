@@ -29,6 +29,7 @@
  * modules. Someday I will do my homework and rewrite this file.
  */
 
+#include <sys/types.h>
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
@@ -37,15 +38,15 @@
 
 #include "jammod.h"
 
-static int relocate_rel(unsigned char *data, unsigned offset,
+static int relocate_rel(unsigned char *data, address_t offset,
                         const Elf32_Rel *rel,
                         Elf32_Shdr *rel_progbits,
                         const Elf32_Sym *sym,
                         const char *strtab) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    unsigned address = rel_progbits->sh_offset + rel->r_offset;
-    unsigned *p = (unsigned*)(data + address);
-    unsigned value;
+    address_t address = rel_progbits->sh_offset + rel->r_offset;
+    address_t *p = (address_t*)(data + address);
+    address_t value;
     const char *name;
     Elf32_Shdr *shdr;
 
@@ -109,7 +110,7 @@ static int relocate_rel(unsigned char *data, unsigned offset,
     return 0;
 }
 
-static int relocate_rel_array(unsigned char *data, unsigned offset,
+static int relocate_rel_array(unsigned char *data, address_t offset,
                               const Elf32_Rel *rel, unsigned rel_count,
                               Elf32_Shdr *rel_progbits,
                               const Elf32_Sym *sym, unsigned sym_count,
@@ -133,7 +134,7 @@ static int relocate_rel_array(unsigned char *data, unsigned offset,
     return 0;
 }
 
-int elf_relocate(unsigned char *data, unsigned offset) {
+int elf_relocate(unsigned char *data, address_t offset) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
     Elf32_Shdr *progbits_shdr, *rel_progbits;
     Elf32_Half z;
@@ -196,8 +197,8 @@ int elf_relocate(unsigned char *data, unsigned offset) {
     return 0;
 }
 
-unsigned elf_get_symbol(unsigned char *data, unsigned offset,
-                        const char *name, unsigned char type) {
+address_t elf_get_symbol(unsigned char *data, address_t offset,
+                         const char *name, unsigned char type) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
     Elf32_Half z;
     char *strtab = NULL;

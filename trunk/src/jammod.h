@@ -27,27 +27,37 @@
 #define __NR_OURSYS OURSYS
 #define __NR_OURCALL OURSYS
 
+/* types */
+
+typedef unsigned address_t;
+
 /* loadfile.c */
+
 unsigned char *loadfile(const char *path, size_t *sizep);
 
 /* linker.c */
-int elf_relocate(unsigned char *data, unsigned offset);
-unsigned elf_get_symbol(unsigned char *data, unsigned offset,
-                        const char *name, unsigned char type);
+
+int elf_relocate(unsigned char *data, address_t offset);
+address_t elf_get_symbol(unsigned char *data, address_t offset,
+                         const char *name, unsigned char type);
 
 /* symbols.c */
+
 int init_symbols(const char *system_map_path);
-unsigned get_symbol(char type, const char *name);
-unsigned get_symbol_ex(char type, const char *name, ...);
+address_t get_symbol(char type, const char *name);
+address_t get_symbol_ex(char type, const char *name, ...);
 
 /* kmem.c */
-int open_kmem(void);
-int rkm(int fd, void *buf, int count, unsigned long off);
-int wkm(int fd, void *buf, int count, unsigned long off);
+
+int init_kmem(void);
+ssize_t rkm(address_t address, void *buf, size_t count);
+ssize_t wkm(address_t address, void *buf, size_t count);
 
 /* kmalloc.c */
-unsigned kmalloc(int fd, unsigned sct, size_t size, int flags);
-int kfree(int fd, unsigned sct, unsigned address);
+
+address_t kmalloc(address_t sct, size_t size, int flags);
+int kfree(address_t sct, address_t address);
 
 /* module.c */
-int init_module(int fd, unsigned sct, unsigned func);
+
+int init_module(address_t sct, address_t func);

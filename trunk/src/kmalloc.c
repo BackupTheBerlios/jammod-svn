@@ -31,19 +31,17 @@
 #include "jammod.h"
 #include "syscall.h"
 
-static int read_syscall(int fd, unsigned sct, unsigned syscall, unsigned *valuep) {
-    return rkm(fd, valuep, sizeof(*valuep),
-               sct + syscall * sizeof(*valuep));
+static int read_syscall(address_t sct, unsigned syscall, address_t *valuep) {
+    return rkm(sct + syscall * sizeof(*valuep), valuep, sizeof(*valuep));
 }
 
-static int write_syscall(int fd, unsigned sct, unsigned syscall, unsigned value) {
-    return wkm(fd, &value, sizeof(value),
-               sct + syscall * sizeof(value));
+static int write_syscall(address_t sct, unsigned syscall, address_t value) {
+    return wkm(sct + syscall * sizeof(value), &value, sizeof(value));               
 }
 
-unsigned kmalloc(int fd, unsigned sct, size_t size, int flags) {
+address_t kmalloc(address_t sct, size_t size, int flags) {
     int ret;
-    unsigned symbol_kmalloc, old_syscall, address;
+    address_t symbol_kmalloc, old_syscall, address;
 
     /* get symbol */
     symbol_kmalloc = get_symbol_ex('T', "kmalloc", "_kmalloc", "__kmalloc");
@@ -53,14 +51,14 @@ unsigned kmalloc(int fd, unsigned sct, size_t size, int flags) {
     }
 
     /* backup old system call, install kmalloc as system call */
-    ret = read_syscall(fd, sct, __NR_KMALLOC, &old_syscall);
+    ret = read_syscall(sct, __NR_KMALLOC, &old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_KMALLOC, strerror(errno));
         return 0;
     }
 
-    ret = write_syscall(fd, sct, __NR_KMALLOC, symbol_kmalloc);
+    ret = write_syscall(sct, __NR_KMALLOC, symbol_kmalloc);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_KMALLOC, strerror(errno));
@@ -71,7 +69,7 @@ unsigned kmalloc(int fd, unsigned sct, size_t size, int flags) {
     address = KMALLOC(size, flags);
 
     /* restore old system call */
-    ret = write_syscall(fd, sct, __NR_KMALLOC, old_syscall);
+    ret = write_syscall(sct, __NR_KMALLOC, old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to restore syscall %u: %s\n",
                 __NR_KMALLOC, strerror(errno));
@@ -80,9 +78,9 @@ unsigned kmalloc(int fd, unsigned sct, size_t size, int flags) {
     return address;
 }
 
-int kfree(int fd, unsigned sct, unsigned address) {
+int kfree(address_t sct, address_t address) {
     int ret;
-    unsigned symbol_kfree, old_syscall;
+    address_t symbol_kfree, old_syscall;
 
     /* get symbol */
     symbol_kfree = get_symbol_ex('T', "kfree", "_kfree", "__kfree");
@@ -92,14 +90,14 @@ int kfree(int fd, unsigned sct, unsigned address) {
     }
 
     /* backup old system call, install kmalloc as system call */
-    ret = read_syscall(fd, sct, __NR_KFREE, &old_syscall);
+    ret = read_syscall(sct, __NR_KFREE, &old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_KFREE, strerror(errno));
         return -1;
     }
 
-    ret = write_syscall(fd, sct, __NR_KFREE, symbol_kfree);
+    ret = write_syscall(sct, __NR_KFREE, symbol_kfree);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_KFREE, strerror(errno));
@@ -110,7 +108,7 @@ int kfree(int fd, unsigned sct, unsigned address) {
     KFREE(address);
 
     /* restore old system call */
-    ret = write_syscall(fd, sct, __NR_KFREE, old_syscall);
+    ret = write_syscall(sct, __NR_KFREE, old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to restore syscall %u: %s\n",
                 __NR_KFREE, strerror(errno));

@@ -29,7 +29,7 @@
 #include "jammod.h"
 
 struct symbol {
-    unsigned address;
+    address_t address;
     char type;
     char *name;
 };
@@ -80,8 +80,9 @@ int init_symbols(const char *system_map_path) {
     return 0;
 }
 
-unsigned get_symbol(char type, const char *name) {
-    unsigned z, weak_value = 0;
+address_t get_symbol(char type, const char *name) {
+    unsigned z;
+    address_t weak_value = 0;
 
     for (z = 0; z < symbol_count; z++) {
         if ((type == 0 || symbols[z].type == type) &&
@@ -101,9 +102,9 @@ unsigned get_symbol(char type, const char *name) {
     return weak_value;
 }
 
-unsigned get_symbol_ex(char type, const char *name, ...) {
+address_t get_symbol_ex(char type, const char *name, ...) {
     va_list ap;
-    unsigned addr;
+    address_t addr;
 
     /* try first name */
     addr = get_symbol(type, name);

@@ -31,29 +31,27 @@
 #include "jammod.h"
 #include "syscall.h"
 
-static int read_syscall(int fd, unsigned sct, unsigned syscall, unsigned *valuep) {
-    return rkm(fd, valuep, sizeof(*valuep),
-               sct + syscall * sizeof(*valuep));
+static int read_syscall(address_t sct, unsigned syscall, address_t *valuep) {
+    return rkm(sct + syscall * sizeof(*valuep), valuep, sizeof(*valuep));
 }
 
-static int write_syscall(int fd, unsigned sct, unsigned syscall, unsigned value) {
-    return wkm(fd, &value, sizeof(value),
-               sct + syscall * sizeof(value));
+static int write_syscall(address_t sct, unsigned syscall, address_t value) {
+    return wkm(sct + syscall * sizeof(value), &value, sizeof(value));               
 }
 
-int init_module(int fd, unsigned sct, unsigned func) {
+int init_module(address_t sct, address_t func) {
     int ret, ret2;
-    unsigned old_syscall;
+    address_t old_syscall;
 
     /* backup old system call, install kmalloc as system call */
-    ret = read_syscall(fd, sct, __NR_INIT_MODULE, &old_syscall);
+    ret = read_syscall(sct, __NR_INIT_MODULE, &old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_INIT_MODULE, strerror(errno));
         return 0;
     }
 
-    ret = write_syscall(fd, sct, __NR_INIT_MODULE, func);
+    ret = write_syscall(sct, __NR_INIT_MODULE, func);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to read syscall %u: %s\n",
                 __NR_INIT_MODULE, strerror(errno));
@@ -64,7 +62,7 @@ int init_module(int fd, unsigned sct, unsigned func) {
     ret2 = INIT_MODULE();
 
     /* restore old system call */
-    ret = write_syscall(fd, sct, __NR_INIT_MODULE, old_syscall);
+    ret = write_syscall(sct, __NR_INIT_MODULE, old_syscall);
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to restore syscall %u: %s\n",
                 __NR_INIT_MODULE, strerror(errno));
