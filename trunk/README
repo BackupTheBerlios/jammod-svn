@@ -22,7 +22,8 @@ the kernel. Also, SucKIT does not relocate symbols. In contrast,
 jammod needs a valid System.map file (I will work on other solutions).
 
 jammod is currently only implemented for i386 Linux. It has been
-tested on Debian Sarge running on a Linux 2.6.0 kernel.
+tested on Debian Sarge run by a Linux 2.6.0 kernel. I tested with 2.4
+kernels once in a while and had no problems.
 
 
 Installation
@@ -33,8 +34,10 @@ Run "make" to compile. You need the following stuff for that:
 - gcc (I used 3.3.3)
 - Linux kernel headers (2.6.0 here)
 
-Install the resulting binary "./src/jammod" on your system, e.g. in
-/usr/local/sbin.
+Edit the file config.mk and check if the values of KERNEL_HEADERS and
+PREFIX are correct. Now compile and install:
+
+ make install
 
 
 Using jammod
@@ -63,7 +66,7 @@ Now run the following command:
 Be careful, if you specify the wrong System.map, the machine will
 crash!
 
-Module unloading is impossible with jammod. Try lsmod - the module
+Unloading modules is impossible with jammod. Try lsmod - the module
 will not show up! For this reason, jammod can not check if the module
 was already loaded - the consequences for loading a module twice are
 undefined.
