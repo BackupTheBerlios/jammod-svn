@@ -1,3 +1,9 @@
+jammod TODO list
+================
+
+$Id$
+
+
 - find solution which does not require System.map
 - write Linux patch which makes /dev/kmem and /dev/mem support
   configurable - also mind the iopl/dma hole; submit this patch to

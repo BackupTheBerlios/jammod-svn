@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/utsname.h>
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
@@ -38,23 +39,63 @@
 #define STT_OBJECT 1
 #define STT_FUNC 2
 
+static void usage(void)  __attribute__ ((__noreturn__));
+static void usage(void) {
+    fprintf(stderr, "usage: jammod [-m System.map] filename\n");
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv) {
-    int fd, ret;
+    int z, fd, ret;
     ulong sct;
+    char *module_path = NULL, *system_map_path = NULL;
     unsigned char *module;
     size_t module_size;
     unsigned base, entry;
     ssize_t nbytes;
 
-    if (argc != 2) {
-        fprintf(stderr, "usage: jammod filename\n");
-        exit(1);
+    /* mini-getopt */
+    for (z = 1; z < argc; z++) {
+        if (argv[z][0] == '-') {
+            switch (argv[z][1]) {
+            case 'm':
+                if (argv[z][2])
+                    usage();
+                z++;
+                if (z >= argc)
+                    usage();
+
+                system_map_path = argv[z];
+                
+                break;
+            default:
+                usage();
+            }
+        } else {
+            if (module_path != NULL)
+                usage();
+            module_path = argv[z];
+        }
+    }
+
+    if (module_path == NULL)
+        usage();
+
+    if (system_map_path == NULL) {
+        /* default to "/boot/System.map-`uname -r`" */
+        char path[64];
+        struct utsname un;
+
+        uname(&un);
+        snprintf(path, sizeof(path), "/boot/System.map-%s", un.release);
+        system_map_path = strdup(path);
     }
 
     /* initialize */
-    ret = init_symbols("/boot/System.map-2.6.0");
+    ret = init_symbols(system_map_path);
     if (ret < 0) {
-        fputs("jammod: failed to load kernel symbol table\n", stderr);
+        fprintf(stderr, "jammod: failed to load kernel symbol table %s: %s\n",
+                system_map_path, strerror(errno));
         exit(1);
     }
 

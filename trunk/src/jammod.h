@@ -21,8 +21,6 @@
  *
  */
 
-#define ERR(x) ((ulong) x > 0xfffff000)
-
 /* the syscall we'll use for comunication and kmalloc() */
 #define	OURCALL oldolduname
 #define	OURSYS __NR_oldolduname
