@@ -1,0 +1,81 @@
+jammod v1.0 README
+==================
+
+$Id$
+
+
+What is jammod?
+---------------
+
+jammod is a program which loads a Linux kernel module without support
+from the kernel. It does not appear in the module list (lsmod,
+/proc/modules). To accomplish this, jammod writes the module file
+directly into kernel memory (/dev/kmem) and links it. As you might
+imagine, fiddling with kernel memory is not very nice - don't use
+jammod on boxes you don't want to see crashing now and then.
+
+jammod is currently only implemented for i386 Linux. It has been
+tested on Debian Sarge running on a Linux 2.6.0 kernel.
+
+
+Installation
+------------
+
+Run "make" to compile. You need the following stuff for that:
+- GNU make
+- gcc (I used 3.3.3)
+- Linux kernel headers (2.6.0 here)
+
+Install the resulting binary "./src/jammod" on your system, e.g. in
+/usr/local/sbin.
+
+
+Using jammod
+------------
+
+XXX: to be written
+
+
+Why?
+----
+
+Because I Can (TM)
+
+This is a proof-of-concept software to demonstrate that disabling
+module support in the kernel does not really improve
+security. Removing /dev/kmem support from the kernel does (AFAIK you
+need to patch the kernel sources to do that). No idea why there is
+this /dev/kmem feature, who ever needed this except SucKIT?
+
+This is a tool, and it is available to everyone, if you like it or
+not. If I hadn't written it, someone else would do it. Tools are not
+bad; the hacker who rooted your server and used it to cover his tracks
+might be called "bad". Damnit, now you wish you had applied all those
+security upgrades.
+
+
+Greetings
+---------
+
+Greetings to my friend MocI with whom I sat in a bar in Cologne
+drinking cocktails, while I had the idea to write this program.
+
+
+The usual legal blah blah
+-------------------------
+
+Copyright 2003-2004 Max Kellermann (max@linuxtag.org), except code
+which was copied from SucKIT and Linux.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.

@@ -1,9 +1,8 @@
-CC = gcc
+TOPDIR = ..
+include $(TOPDIR)/config.mk
 
-CFLAGS = -I../include -isystem /usr/src/linux-2.6.0/include -D_GNU_SOURCE -std=gnu99
-CFLAGS += -g -O0
+CFLAGS += -I../include -isystem $(KERNEL_HEADERS) -D_GNU_SOURCE -std=gnu99
 CFLAGS += -W -Wall -Wmissing-prototypes -Wwrite-strings -Wcast-qual -Wfloat-equal -Wshadow -Wpointer-arith -Wbad-function-cast -Wsign-compare -Waggregate-return -Wmissing-declarations -Wmissing-noreturn -Wmissing-format-attribute -Wredundant-decls -Wnested-externs -Winline -Wdisabled-optimization -Wno-long-long -Wstrict-prototypes -Wundef -pedantic -Werror
-# -Wpadded
 
 all: jammod test.o
 
