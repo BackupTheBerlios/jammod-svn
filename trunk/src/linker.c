@@ -1,0 +1,256 @@
+/*
+ * linker.c
+ * $Id$
+ *
+ * The module linker - relocate an ELF object for insertion to kernel
+ * memory.
+ *
+ * (c) 2003 Max Kellermann (max@linuxtag.org)
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; version 2 of the License.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ */
+
+/*
+ * Yes I know everybody can see here that I have no idea of ELF and
+ * linking in general. I read the ELF spec, the Linux kernel
+ * headers. Then I hacked on this source until it worked for my test
+ * modules. Someday I will do my homework and rewrite this file.
+ */
+
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
+
+#include <linux/elf.h>
+
+#include "jammod.h"
+
+static int relocate_rel(unsigned char *data, unsigned offset,
+                        const Elf32_Rel *rel,
+                        Elf32_Shdr *rel_progbits,
+                        const Elf32_Sym *sym,
+                        const char *strtab) {
+    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    unsigned *p = (unsigned*)(data + rel_progbits->sh_offset + rel->r_offset);
+    unsigned value;
+    char symbol_char;
+    const char *name;
+    Elf32_Shdr *shdr;
+
+    fprintf(stderr, "rel: ST_TYPE = %u\n", ELF32_ST_TYPE(sym->st_info));
+
+    switch (ELF32_ST_TYPE(sym->st_info)) {
+    case STT_NOTYPE:
+        /* symbol from kernel */
+
+        /* function or variable? */
+        switch (ELF32_R_TYPE(rel->r_info)) {
+        case R_386_32:
+            symbol_char = 'D';
+            break;
+        case R_386_PC32:
+            symbol_char = 'T';
+            break;
+        default:
+            fprintf(stderr, "unkown R_TYPE: %d\n", ELF32_R_TYPE(rel->r_info));
+            return -1;
+        }
+
+        /* get symbol name */
+        name = strtab + sym->st_name;
+
+        /* resolve the symbol using kernel symbol table */
+        value = get_symbol(symbol_char, name);
+        if (value == 0) {
+            fprintf(stderr, "cannot to resolve %s\n", name);
+            return -1;
+        }
+
+        break;
+
+    case STT_SECTION:
+        /* local symbol */
+
+        if (sym->st_shndx >= hdr->e_shnum) {
+            fprintf(stderr, "sym->st_shndx out of bounds\n");
+            return -1;
+        }
+        shdr = (Elf32_Shdr*)(data + hdr->e_shoff +
+                             sym->st_shndx * hdr->e_shentsize);
+
+        value = offset + shdr->sh_offset;
+        break;
+
+    case STT_OBJECT:
+    case STT_FUNC:
+        value = offset + shdr->sh_offset + sym->st_value;
+        break;
+
+    default:
+        fprintf(stderr, "unkown ST_TYPE: %d\n", ELF32_ST_TYPE(sym->st_info));
+        return -1;
+    }
+
+    /* relocate it! */
+    *p = value;
+
+    return 0;
+}
+
+static int do_relocate(unsigned char *data, unsigned offset,
+                       const Elf32_Rel *rel, unsigned rel_count,
+                       Elf32_Shdr *rel_progbits,
+                       const Elf32_Sym *sym, unsigned sym_count,
+                       const char *strtab) {
+    int ret;
+
+    for (; rel_count > 0; rel_count--, rel++) {
+        Elf32_Word sym_index = ELF32_R_SYM(rel->r_info);
+
+        if (sym_index >= sym_count)
+            return -1;
+
+        ret = relocate_rel(data, offset, rel, rel_progbits,
+                           sym + sym_index, strtab);
+        if (ret < 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+int elf_relocate(unsigned char *data, unsigned offset) {
+    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    Elf32_Shdr *progbits_shdr, *rel_progbits;
+    Elf32_Half z;
+    Elf32_Rel *rel = NULL;
+    Elf32_Sym *sym = NULL;
+    unsigned rel_count, sym_count;
+    char *strtab = NULL;
+
+    /* verify ELF header */
+    if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0 ||
+        hdr->e_ident[4] != ELFCLASS32 ||
+        hdr->e_type != ET_REL ||
+        hdr->e_machine != EM_386 ||
+        hdr->e_version != EV_CURRENT) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    for (z = 0; z < hdr->e_shnum; z++) {
+        Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize);
+        switch (shdr->sh_type) {
+        case SHT_PROGBITS:
+            progbits_shdr = shdr;
+            break;
+        case SHT_REL:
+            if (progbits_shdr == NULL) {
+                fprintf(stderr, "no last_shdr\n");
+                continue;
+            }
+                
+            fprintf(stderr, "rel!\n");
+
+            rel_progbits = progbits_shdr;
+            rel = (Elf32_Rel*)(data + shdr->sh_offset);
+            rel_count = shdr->sh_size / sizeof(*rel);
+            fprintf(stderr, "rel_count=%u\n", rel_count);
+
+            break;
+        case SHT_SYMTAB:
+            fprintf(stderr, "symtab.\n");
+            sym = (Elf32_Sym*)(data + shdr->sh_offset);
+            sym_count = shdr->sh_size / sizeof(*sym);
+            fprintf(stderr, "sym_count=%u\n", sym_count);
+            break;
+        case SHT_STRTAB:
+            fprintf(stderr, "strtab.\n");
+            strtab = (char*)(data + shdr->sh_offset);
+            break;
+        default:
+            fprintf(stderr, "section %u\n", shdr->sh_type);
+        }
+    }
+
+    if (rel == NULL)
+        return 0;
+
+    if (sym == NULL)
+        return -1;
+
+    return do_relocate(data, offset,
+                       rel, rel_count, rel_progbits,
+                       sym, sym_count,
+                       strtab);
+}
+
+unsigned elf_get_symbol(unsigned char *data, unsigned offset,
+                        const char *name, unsigned char type) {
+    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    Elf32_Half z;
+    char *strtab = NULL;
+
+    /* verify ELF header */
+    if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0 ||
+        hdr->e_ident[4] != ELFCLASS32 ||
+        hdr->e_type != ET_REL ||
+        hdr->e_machine != EM_386 ||
+        hdr->e_version != EV_CURRENT)
+        return 0;
+
+    /* find strtab */
+    for (z = 0; z < hdr->e_shnum; z++) {
+        Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize);
+        if (shdr->sh_type == SHT_STRTAB) {
+            strtab = (char*)(data + shdr->sh_offset);
+            break;
+        }
+    }
+
+    if (strtab == NULL)
+        return 0;
+
+    /* for each SYMTAB */
+    for (z = 0; z < hdr->e_shnum; z++) {
+        Elf32_Shdr *shdr = (Elf32_Shdr*)(data + hdr->e_shoff + z * hdr->e_shentsize),
+            *shdr2;
+        if (shdr->sh_type == SHT_SYMTAB) {
+            /* find symbol in this SYMTAB */
+            Elf32_Sym *sym = (Elf32_Sym*)(data + shdr->sh_offset);
+            unsigned z2, sym_count = shdr->sh_size / sizeof(*sym);
+
+            for (z2 = 0; z2 < sym_count; z2++, sym++) {
+                if (ELF32_ST_TYPE(sym->st_info) != type)
+                    continue;
+                if (strcmp(strtab + sym->st_name, name) != 0)
+                    continue;
+
+                if (sym->st_shndx >= hdr->e_shnum) {
+                    fprintf(stderr, "sym->st_shndx out of bounds\n");
+                    return 0;
+                }
+                shdr2 = (Elf32_Shdr*)(data + hdr->e_shoff +
+                                      sym->st_shndx * hdr->e_shentsize);
+
+                fprintf(stderr, "get_symbol %s: shdr->sh_offset=%u\n", name, shdr->sh_offset);
+
+                return offset + shdr->sh_offset + sym->st_value;
+            }
+        }
+    }
+
+    return 0;
+}
