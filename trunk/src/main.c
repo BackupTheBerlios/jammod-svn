@@ -43,18 +43,18 @@ static void usage(void)  __attribute__ ((__noreturn__));
 static void usage(void) {
     fprintf(stderr, "jammod v%s (c) 2003-2004 Max Kellermann (max@linuxtag.org)\n",
             PACKAGE_VERSION);
-    fprintf(stderr, "usage: jammod [-m System.map] filename\n");
+    fprintf(stderr, "usage: jammod [-m System.map] filename [param1=value1 ...]\n");
     exit(EXIT_FAILURE);
 }
 
 int main(int argc, char **argv) {
-    int z, ret;
-    ulong sct;
+    int z, ret, verbose = 0;
     char *module_path = NULL, *system_map_path = NULL;
     unsigned char *module;
     size_t module_size;
-    address_t base, entry;
+    address_t sct, base, entry;
     ssize_t nbytes;
+    char param[64];
 
     /* mini-getopt */
     for (z = 1; z < argc; z++) {
@@ -70,6 +70,11 @@ int main(int argc, char **argv) {
                 system_map_path = argv[z];
                 
                 break;
+            case 'v':
+                if (argv[z][2])
+                    usage();
+                verbose++;
+                break;
             default:
                 usage();
             }
@@ -77,6 +82,8 @@ int main(int argc, char **argv) {
             if (module_path != NULL)
                 usage();
             module_path = argv[z];
+            z++;
+            break;
         }
     }
 
@@ -102,11 +109,42 @@ int main(int argc, char **argv) {
     }
 
     /* load file, check ELF format */
-    module = loadfile(argv[1], &module_size);
+    module = loadfile(module_path, &module_size);
     if (module == NULL) {
         fprintf(stderr, "jammod: failed to load %s: %s\n",
-                argv[1], strerror(errno));
+                module_path, strerror(errno));
         exit(1);
+    }
+
+    /* set arguments */
+    for (; z < argc; z++) {
+        char *eq;
+        address_t address;
+        int value, *dest;
+
+        snprintf(param, sizeof(param), "%s", argv[z]);
+        eq = strchr(param, '=');
+        if (eq == NULL || eq == param || !eq[1])
+            usage();
+
+        *eq = 0;
+
+        address = elf_get_symbol(module, 0, param, STT_OBJECT);
+        if (address == 0) {
+            fprintf(stderr, "jammod: symbol %s not found\n",
+                    param);
+            exit(EXIT_FAILURE);
+        }
+
+        dest = (int*)(module + address);
+
+        value = (int)strtol(eq + 1, NULL, 0);
+
+        if (verbose > 0)
+            fprintf(stderr, "setting %s (offset 0x%08x) to 0x%08x, old value 0x%08x\n",
+                    param, address, value, *dest);
+
+        *dest = value;
     }
 
     /* open kernel */
@@ -114,25 +152,32 @@ int main(int argc, char **argv) {
     if (ret < 0) {
         fprintf(stderr, "jammod: failed to open /dev/kmem: %s\n",
                 strerror(errno));
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     sct = get_symbol('D', "sys_call_table");
     if (sct == 0) {
         fputs("jammod: symbol 'sys_call_table' not found in kernel\n", stderr);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
+
+    if (verbose > 2)
+        fprintf(stderr, "sys_call_table = 0x%08x\n", sct);
 
     /* write module to kernel space */
     base = kmalloc(sct, module_size, GFP_KERNEL);
     if (base == 0) {
         fprintf(stderr, "jammod: failed to kmalloc(%u)\n", module_size);
+        exit(EXIT_FAILURE);
     }
+
+    if (verbose > 0)
+        fprintf(stderr, "base = 0x%08x\n", base);
 
     ret = elf_relocate(module, base);
     if (ret < 0) {
         fputs("jammod: failed to relocate\n", stderr);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     nbytes = wkm(base, module, module_size);
@@ -140,7 +185,7 @@ int main(int argc, char **argv) {
         kfree(sct, base);
         fprintf(stderr, "jammod: failed to copy module to kernel: %s\n",
                 strerror(errno));
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     /* init_module */
@@ -148,17 +193,20 @@ int main(int argc, char **argv) {
     if (entry == 0) {
         kfree(sct, base);
         fputs("jammod: symbol 'init_module' not found in module\n", stderr);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
+
+    if (verbose > 2)
+        fprintf(stderr, "entry = 0x%08x\n", entry);
 
     ret = init_module(sct, entry);
     if (ret < 0) {
         fprintf(stderr, "jammod: module's init_module failed, return code %d\n",
                 ret);
         kfree(sct, base);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     fprintf(stderr, "jammod: module loaded successfully\n");
-    return 0;
+    return EXIT_SUCCESS;
 }
