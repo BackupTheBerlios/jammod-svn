@@ -1,0 +1,8 @@
+jammod TODO list
+================
+
+$Id$
+
+
+- find solution which does not require System.map
+- write Linux patch for the iopl/dma hole

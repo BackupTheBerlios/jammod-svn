@@ -1,0 +1,147 @@
+jammod v1.0 README
+==================
+
+$Id$
+
+
+What is jammod?
+---------------
+
+jammod is a program which loads a Linux kernel module without support
+from the kernel. It does not appear in the module list (lsmod,
+/proc/modules). To accomplish this, jammod writes the module file
+directly into kernel memory (/dev/kmem) and links it. As you might
+imagine, fiddling with kernel memory is not very nice - don't use
+jammod on boxes you don't want to see crashing now and then.
+
+The idea of inserting kernel code via /dev/kmem is not new - the root
+kit SucKIT has been doing this for some time. A detailed description
+of this method was published in Phrack 58 in December 2001. The whole
+point of jammod is that you can load any (ABI compatible) module into
+the kernel. Also, SucKIT does not relocate symbols. In contrast,
+jammod needs a valid System.map file (I will work on other solutions).
+
+jammod is currently only implemented for i386 Linux. It has been
+tested on Debian Sarge run by a Linux 2.6.1 kernel. I tested with 2.4
+kernels once in a while and had no problems.
+
+
+Installation
+------------
+
+Run "make" to compile. You need the following stuff for that:
+- GNU make
+- gcc (I used 3.3.3)
+- Linux kernel headers (2.6.1 here)
+
+Edit the file config.mk and check if the values of KERNEL_HEADERS and
+PREFIX are correct. Now compile and install:
+
+ make install
+
+
+Using jammod
+------------
+
+On the target host, you need:
+- Linux kernel 2.4.10 or later
+- System.map
+- a kernel module which is ABI compatible to the running kernel
+- the jammod binary
+
+[The "ABI compatible" should be the hardest part here - the Linux
+kernel hackers change parts of the module ABI quite often. If you
+compile your module including kernel headers of the same kernel
+version with a similar configuration, chances are very good that the
+binary is compatible.
+
+I have not implemented support for kernels older than 2.4.10 - anybody
+really interested?]
+
+Run the following command:
+
+ jammod -m /boot/System.map samples/test.ko
+ jammod -m /boot/System.map samples/param.ko param=0x0815affe
+ jammod -m /boot/System.map samples/capall.ko pid=$$
+
+Be careful, if you use the wrong System.map, the machine will crash!
+
+Unloading modules is impossible with jammod. Try lsmod - the module
+will not show up! For this reason, jammod can not check if the module
+was already loaded - the consequences for loading a module twice are
+undefined.
+
+However, the features of the module are present. E.g. if you load
+romfs.ko, the ROM file system will appear in /proc/filesystems. Try
+this with a LKM root kit.
+
+
+The capall.ko sample module
+---------------------------
+
+Restores capabilities. I wrote something similar when I wanted to
+enable capabilities on a 2.4 kernel without reboot. It gives the
+parent process all capabilities and removes the system cap bound
+(/proc/sys/kernel/cap-bound).
+
+Normally, you lower the cap bound to remove features from the kernel,
+which are then accessible neither by you, nor by an attacker. The
+process is documented as irreversible until you reboot. "Irreversible"
+is not so irreversible as it sounds - if you have full access to the
+kernel, you can do anything, even raise the cap bound, which is not
+more than one variable assigment.
+
+Got another idea which kernel variable would be nice to tweak while it
+runs? Or something else? Try it, it's easy. Oh, and never forget to
+back up your hard disk before.
+
+
+Why?
+----
+
+Because I Can (TM)
+
+(and, of course, because I had a lot of fun while learning some really
+interesting stuff)
+
+This is a proof-of-concept software to demonstrate to the masses that
+disabling module support in the kernel does not really improve
+security. Removing /dev/kmem support from the kernel does. No idea why
+there is this /dev/kmem feature, who needs this?
+
+I think /dev/kmem etc. should be disabled by default. This package
+contains a patch for kernel 2.6.1 which should also work on 2.4
+kernels.
+
+
+Links
+-----
+
+jammod homepage
+  http://readme.gzipped.org/projects/jammod/
+
+"Linux on-the-fly kernel patching without LKM"
+  https://www.phrack.com/show.php?p=58&a=7
+
+SucKIT download site
+  http://hysteria.sk/sd/f/suckit/
+
+
+The usual legal blah blah
+-------------------------
+
+Copyright 2003-2004 Max Kellermann (max@linuxtag.org), except code
+which was copied from SucKIT and Linux.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
