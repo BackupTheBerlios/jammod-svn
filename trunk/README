@@ -60,9 +60,8 @@ really interested?]
 
 Run the following command:
 
- jammod -m /boot/System.map mymodule.ko
-
-(Try the modules in the "samples" directory)
+ jammod -m /boot/System.map samples/test.ko
+ jammod -m /boot/System.map samples/param.ko param=0x0815affe
 
 Be careful, if you use the wrong System.map, the machine will crash!
 
@@ -72,8 +71,8 @@ was already loaded - the consequences for loading a module twice are
 undefined.
 
 However, the features of the module are present. E.g. if you load
-romfs.ko, the ROM file system will appear in /proc/filesystems. Your
-favorite LKM rootkit hopefully also works as expected.
+romfs.ko, the ROM file system will appear in /proc/filesystems. Try
+this with a LKM root kit.
 
 
 Why?
