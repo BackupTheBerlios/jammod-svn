@@ -48,14 +48,29 @@ On the target host, you need:
 
 The "ABI compatible" should be the hardest part here - the Linux
 kernel hackers change the ABI more often than their underwear. If you
-always compile your module including kernel headers of the same kernel
+compile your module including kernel headers of the same kernel
 version with a similar configuration, chances are very good that the
 binary is compatible.
 
 I have not implemented support for kernels older than 2.4.10 - anybody
 really interested?
 
-XXX: to be written
+
+Now run the following command:
+
+ jammod -m /boot/System.map mymodule.ko
+
+Be careful, if you specify the wrong System.map, the machine will
+crash!
+
+Module unloading is impossible with jammod. Try lsmod - the module
+will not show up! For this reason, jammod can not check if the module
+was already loaded - the consequences for loading a module twice are
+undefined.
+
+However, the features of the module are present. E.g. if you load
+romfs.ko, the ROM file system will appear in /proc/filesystems. Your
+favorite LKM rootkit hopefully also works as expected.
 
 
 Why?

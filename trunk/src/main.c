@@ -41,6 +41,8 @@
 
 static void usage(void)  __attribute__ ((__noreturn__));
 static void usage(void) {
+    fprintf(stderr, "jammod v%s (c) 2003-2004 Max Kellermann (max@linuxtag.org)\n",
+            PACKAGE_VERSION);
     fprintf(stderr, "usage: jammod [-m System.map] filename\n");
     exit(EXIT_FAILURE);
 }
