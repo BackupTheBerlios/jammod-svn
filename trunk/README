@@ -86,16 +86,12 @@ module support in the kernel does not really improve
 security. Removing /dev/kmem support from the kernel does. No idea why
 there is this /dev/kmem feature, who ever needed this except SucKIT?
 
-This is a tool, and it is available to everyone, if you like it or
-not. If I hadn't written it, someone else would do it. Tools are not
-bad; the hacker who rooted your server and used it to cover his tracks
-might be called "bad". Damnit, now you wish you had applied all those
-security upgrades.
-
 If you want to protect your machines from others exploiting your
 kernel using jammod, SucKIT or similar software, disable /dev/kmem and
 /dev/mem in your kernel. You have to patch linux/drivers/char/mem.c to
-do that. IMHO, /dev/kmem etc. should be disabled by default.
+do that. IMHO, /dev/kmem etc. should be disabled by default. This
+package contains a patch for kernel 2.6.1 which should also work on
+2.4 kernels.
 
 
 Links
