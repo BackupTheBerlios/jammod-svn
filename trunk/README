@@ -14,6 +14,13 @@ directly into kernel memory (/dev/kmem) and links it. As you might
 imagine, fiddling with kernel memory is not very nice - don't use
 jammod on boxes you don't want to see crashing now and then.
 
+The idea of inserting kernel code via /dev/kmem is not new - the root
+kit SucKIT has been doing this for some time. A detailed description
+of this method was published in Phrack 58 in December 2001. The whole
+point of jammod is that you can load any (ABI compatible) module into
+the kernel. Also, SucKIT does not relocate symbols. In contrast,
+jammod needs a valid System.map file (I will work on other solutions).
+
 jammod is currently only implemented for i386 Linux. It has been
 tested on Debian Sarge running on a Linux 2.6.0 kernel.
 
@@ -33,6 +40,21 @@ Install the resulting binary "./src/jammod" on your system, e.g. in
 Using jammod
 ------------
 
+On the target host, you need:
+- Linux kernel 2.4.10 or later
+- System.map
+- a kernel module which is ABI compatible to the running kernel
+- the jammod binary
+
+The "ABI compatible" should be the hardest part here - the Linux
+kernel hackers change the ABI more often than their underwear. If you
+always compile your module including kernel headers of the same kernel
+version with a similar configuration, chances are very good that the
+binary is compatible.
+
+I have not implemented support for kernels older than 2.4.10 - anybody
+really interested?
+
 XXX: to be written
 
 
@@ -43,15 +65,32 @@ Because I Can (TM)
 
 This is a proof-of-concept software to demonstrate that disabling
 module support in the kernel does not really improve
-security. Removing /dev/kmem support from the kernel does (AFAIK you
-need to patch the kernel sources to do that). No idea why there is
-this /dev/kmem feature, who ever needed this except SucKIT?
+security. Removing /dev/kmem support from the kernel does. No idea why
+there is this /dev/kmem feature, who ever needed this except SucKIT?
 
 This is a tool, and it is available to everyone, if you like it or
 not. If I hadn't written it, someone else would do it. Tools are not
 bad; the hacker who rooted your server and used it to cover his tracks
 might be called "bad". Damnit, now you wish you had applied all those
 security upgrades.
+
+If you want to protect your machines from others exploiting your
+kernel using jammod, SucKIT or similar software, disable /dev/kmem and
+/dev/mem in your kernel. You have to patch linux/drivers/char/mem.c to
+do that. IMHO, /dev/kmem etc. should be disabled by default.
+
+
+Links
+-----
+
+jammod homepage
+  http://readme.gzipped.org/jammod/
+
+"Linux on-the-fly kernel patching without LKM"
+  https://www.phrack.com/show.php?p=58&a=7
+
+SucKIT download site
+  http://hysteria.sk/sd/f/suckit/
 
 
 Greetings

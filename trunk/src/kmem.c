@@ -51,16 +51,3 @@ int	wkm(int fd, void *buf, int count, ulong off)
 		return i;
 	return write(fd, buf, count);
 }
-
-/* this is almost same, but for one long only */
-int	rkml(int fd, ulong *l, ulong off)
-{
-	return rkm(fd, l, sizeof(*l), off);
-}
-
-int	wkml(int fd, ulong l, ulong off)
-{
-	return wkm(fd, &l, sizeof(l), off);
-}
-
-

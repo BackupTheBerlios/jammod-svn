@@ -4,7 +4,7 @@
  *
  * Kernel symbol table functions.
  *
- * (c) 2003 Max Kellermann (max@linuxtag.org)
+ * (c) 2003-2004 Max Kellermann (max@linuxtag.org)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ struct symbol {
 static struct symbol *symbols;
 static unsigned symbol_count;
 
-int init_symbols(void) {
+int init_symbols(const char *system_map_path) {
     FILE *file;
     char name[128];
     unsigned size = 0;
@@ -49,7 +49,7 @@ int init_symbols(void) {
     symbols = malloc(size * sizeof(*symbols));
 
     /* XXX: don't hardcode */
-    file = fopen("/boot/System.map-2.6.0", "r");
+    file = fopen(system_map_path, "r");
     if (file == NULL)
         return -1;
 

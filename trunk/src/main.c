@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     }
 
     /* initialize */
-    ret = init_symbols();
+    ret = init_symbols("/boot/System.map-2.6.0");
     if (ret < 0) {
         fputs("jammod: failed to load kernel symbol table\n", stderr);
         exit(1);

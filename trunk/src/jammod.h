@@ -38,7 +38,7 @@ unsigned elf_get_symbol(unsigned char *data, unsigned offset,
                         const char *name, unsigned char type);
 
 /* symbols.c */
-int init_symbols(void);
+int init_symbols(const char *system_map_path);
 unsigned get_symbol(char type, const char *name);
 unsigned get_symbol_ex(char type, const char *name, ...);
 
@@ -46,8 +46,6 @@ unsigned get_symbol_ex(char type, const char *name, ...);
 int open_kmem(void);
 int rkm(int fd, void *buf, int count, unsigned long off);
 int wkm(int fd, void *buf, int count, unsigned long off);
-int rkml(int fd, unsigned long *l, unsigned long off);
-int wkml(int fd, unsigned long l, unsigned long off);
 
 /* kmalloc.c */
 unsigned kmalloc(int fd, unsigned sct, size_t size, int flags);
