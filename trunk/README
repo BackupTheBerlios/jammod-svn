@@ -22,7 +22,7 @@ the kernel. Also, SucKIT does not relocate symbols. In contrast,
 jammod needs a valid System.map file (I will work on other solutions).
 
 jammod is currently only implemented for i386 Linux. It has been
-tested on Debian Sarge run by a Linux 2.6.0 kernel. I tested with 2.4
+tested on Debian Sarge run by a Linux 2.6.1 kernel. I tested with 2.4
 kernels once in a while and had no problems.
 
 
@@ -32,7 +32,7 @@ Installation
 Run "make" to compile. You need the following stuff for that:
 - GNU make
 - gcc (I used 3.3.3)
-- Linux kernel headers (2.6.0 here)
+- Linux kernel headers (2.6.1 here)
 
 Edit the file config.mk and check if the values of KERNEL_HEADERS and
 PREFIX are correct. Now compile and install:
@@ -81,24 +81,24 @@ Why?
 
 Because I Can (TM)
 
-This is a proof-of-concept software to demonstrate that disabling
-module support in the kernel does not really improve
-security. Removing /dev/kmem support from the kernel does. No idea why
-there is this /dev/kmem feature, who ever needed this except SucKIT?
+(and, of course, because I had a lot of fun while learning some really
+interesting stuff)
 
-If you want to protect your machines from others exploiting your
-kernel using jammod, SucKIT or similar software, disable /dev/kmem and
-/dev/mem in your kernel. You have to patch linux/drivers/char/mem.c to
-do that. IMHO, /dev/kmem etc. should be disabled by default. This
-package contains a patch for kernel 2.6.1 which should also work on
-2.4 kernels.
+This is a proof-of-concept software to demonstrate to the masses that
+disabling module support in the kernel does not really improve
+security. Removing /dev/kmem support from the kernel does. No idea why
+there is this /dev/kmem feature, who needs this?
+
+I think /dev/kmem etc. should be disabled by default. This package
+contains a patch for kernel 2.6.1 which should also work on 2.4
+kernels.
 
 
 Links
 -----
 
 jammod homepage
-  http://readme.gzipped.org/jammod/
+  http://readme.gzipped.org/projects/jammod/
 
 "Linux on-the-fly kernel patching without LKM"
   https://www.phrack.com/show.php?p=58&a=7
