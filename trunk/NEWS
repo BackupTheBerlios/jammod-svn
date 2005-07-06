@@ -1,3 +1,9 @@
+jammod (1.0+svn) unstable; urgency=low
+
+  * initialize local variables correctly, fixes compiler warnings
+
+ --
+
 jammod (1.0) unstable; urgency=low
 
   * first release

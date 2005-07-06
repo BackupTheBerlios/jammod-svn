@@ -136,11 +136,11 @@ static int relocate_rel_array(unsigned char *data, address_t offset,
 
 int elf_relocate(unsigned char *data, address_t offset) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    Elf32_Shdr *progbits_shdr, *rel_progbits;
+    Elf32_Shdr *progbits_shdr = NULL, *rel_progbits;
     Elf32_Half z;
     Elf32_Rel *rel = NULL;
     Elf32_Sym *sym = NULL;
-    unsigned rel_count, sym_count;
+    unsigned rel_count, sym_count = 0;
     char *strtab = NULL;
     int ret;
 
