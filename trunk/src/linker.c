@@ -157,17 +157,23 @@ int elf_relocate(unsigned char *data, address_t offset) {
 
     sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
 
+    /* find strtab and symtab */
+
     for (i = 0; i < hdr->e_shnum; i++) {
-        const Elf32_Shdr *shdr = sechdrs + i;
-        switch (shdr->sh_type) {
+        switch (sechdrs[i].sh_type) {
         case SHT_SYMTAB:
-            sym = (const Elf32_Sym*)(data + shdr->sh_offset);
-            sym_count = shdr->sh_size / sizeof(*sym);
+            sym = (const Elf32_Sym*)(data + sechdrs[i].sh_offset);
+            sym_count = sechdrs[i].sh_size / sizeof(*sym);
             break;
         case SHT_STRTAB:
-            strtab = (const char*)(data + shdr->sh_offset);
+            strtab = (const char*)(data + sechdrs[i].sh_offset);
             break;
         }
+    }
+
+    if (strtab == NULL || sym == NULL) {
+        errno = EINVAL;
+        return -1;
     }
 
     for (i = 0; i < hdr->e_shnum; i++) {
@@ -203,10 +209,10 @@ int elf_relocate(unsigned char *data, address_t offset) {
 address_t elf_get_symbol(const unsigned char *data, address_t offset,
                          const char *name, unsigned char type) {
     const Elf32_Ehdr *hdr = (const struct elf32_hdr*)data;
-    const Elf32_Shdr *sechdrs, *symtab = NULL;
+    const Elf32_Shdr *sechdrs;
     const char *strtab = NULL;
-    unsigned i, sym_count;
-    const Elf32_Sym *sym;
+    unsigned i, sym_count = 0;
+    const Elf32_Sym *sym = NULL;
 
     /* verify ELF header */
     if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0 ||
@@ -222,19 +228,23 @@ address_t elf_get_symbol(const unsigned char *data, address_t offset,
     /* find strtab and symtab */
 
     for (i = 0; i < hdr->e_shnum; i++) {
-        if (sechdrs[i].sh_type == SHT_STRTAB)
+        switch (sechdrs[i].sh_type) {
+        case SHT_SYMTAB:
+            sym = (const Elf32_Sym*)(data + sechdrs[i].sh_offset);
+            sym_count = sechdrs[i].sh_size / sizeof(*sym);
+            break;
+        case SHT_STRTAB:
             strtab = (const char*)(data + sechdrs[i].sh_offset);
-        else if (sechdrs[i].sh_type == SHT_SYMTAB)
-            symtab = &sechdrs[i];
+            break;
+        }
     }
 
-    if (strtab == NULL || symtab == NULL)
-        return 0;
+    if (strtab == NULL || sym == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
 
     /* look for symbol in symtab */
-
-    sym = (const Elf32_Sym*)(data + symtab->sh_offset);
-    sym_count = symtab->sh_size / sizeof(*sym);
 
     for (i = 0; i < sym_count; i++, sym++) {
         if (ELF32_ST_TYPE(sym->st_info) != type)
