@@ -44,11 +44,11 @@ static int relocate_rel(unsigned char *data, address_t offset,
                         const Elf32_Sym *sym,
                         const char *strtab) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    const Elf32_Shdr *sechdrs = (const Elf32_Shdr*)(data + hdr->e_shoff);
     address_t address = rel_progbits->sh_offset + rel->r_offset;
     address_t *p = (address_t*)(data + address);
     address_t value;
     const char *name;
-    Elf32_Shdr *shdr;
 
     switch (ELF32_ST_TYPE(sym->st_info)) {
     case STT_NOTYPE:
@@ -74,10 +74,7 @@ static int relocate_rel(unsigned char *data, address_t offset,
             return -1;
         }
 
-        shdr = (Elf32_Shdr*)(data + hdr->e_shoff +
-                             sym->st_shndx * hdr->e_shentsize);
-
-        value = offset + shdr->sh_offset;
+        value = offset + sechdrs[sym->st_shndx].sh_offset;
         break;
 
     case STT_OBJECT:
@@ -89,9 +86,7 @@ static int relocate_rel(unsigned char *data, address_t offset,
             return -1;
         }
 
-        shdr = (Elf32_Shdr*)(data + hdr->e_shoff +
-                             sym->st_shndx * hdr->e_shentsize);
-        value = offset + shdr->sh_offset + sym->st_value;
+        value = offset + sechdrs[sym->st_shndx].sh_offset + sym->st_value;
         break;
 
     default:
