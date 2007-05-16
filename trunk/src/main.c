@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
     /* write module to kernel space */
     base = kmalloc(sct, module_size, GFP_KERNEL);
     if (base == 0) {
-        fprintf(stderr, "jammod: failed to kmalloc(%u)\n", module_size);
+        fprintf(stderr, "jammod: failed to kmalloc(%zu)\n", module_size);
         exit(EXIT_FAILURE);
     }
 
