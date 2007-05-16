@@ -38,7 +38,7 @@ unsigned char *loadfile(const char *path, size_t *sizep);
 /* linker.c */
 
 int elf_relocate(unsigned char *data, address_t offset);
-address_t elf_get_symbol(unsigned char *data, address_t offset,
+address_t elf_get_symbol(const unsigned char *data, address_t offset,
                          const char *name, unsigned char type);
 
 /* symbols.c */
