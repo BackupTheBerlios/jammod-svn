@@ -34,8 +34,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <linux/elf.h>
-
 #include "jammod.h"
 
 static int relocate_rel(unsigned char *data, address_t offset,
@@ -96,7 +94,7 @@ static int relocate_rel(unsigned char *data, address_t offset,
 
     /* relocate it */
 
-    apply_relocate(ELF32_R_TYPE(rel->r_info),
+    apply_relocate(rel,
                    value,
                    p,
                    offset + address);

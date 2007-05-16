@@ -21,6 +21,8 @@
  *
  */
 
+#include <linux/elf.h>
+
 /* the syscall we'll use for comunication and kmalloc() */
 #define	OURCALL oldolduname
 #define	OURSYS __NR_oldolduname
@@ -43,7 +45,7 @@ address_t elf_get_symbol(const unsigned char *data, address_t offset,
 
 /* relocate.c */
 
-int apply_relocate(unsigned rel_type,
+int apply_relocate(const Elf32_Rel *rel,
 		   address_t sym_value,
 		   address_t *location,
 		   address_t final_location);

@@ -23,17 +23,15 @@
  * linux/arch/X/kernel/module.c.
  */
 
-#include <linux/elf.h>
-
 #include "jammod.h"
 
-int apply_relocate(unsigned rel_type,
+int apply_relocate(const Elf32_Rel *rel,
 		   address_t sym_value,
 		   address_t *location,
 		   address_t final_location)
 {
 #ifdef __i386__
-	switch (rel_type) {
+	switch (ELF32_R_TYPE(rel->r_info)) {
 	case R_386_32:
 		/* We add the value into the location given */
 		*location += sym_value;
