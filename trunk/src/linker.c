@@ -131,7 +131,7 @@ static int relocate_rel_array(unsigned char *data, address_t offset,
 
 int elf_relocate(unsigned char *data, address_t offset) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    const Elf32_Shdr *sechdrs, *progbits_shdr = NULL, *rel_progbits;
+    const Elf32_Shdr *sechdrs, *progbits_shdr = NULL;
     Elf32_Half i;
     Elf32_Rel *rel = NULL;
     const Elf32_Sym *sym = NULL;
@@ -183,12 +183,11 @@ int elf_relocate(unsigned char *data, address_t offset) {
                 continue;
             }
                 
-            rel_progbits = progbits_shdr;
             rel = (Elf32_Rel*)(data + shdr->sh_offset);
             rel_count = shdr->sh_size / sizeof(*rel);
 
             ret = relocate_rel_array(data, offset,
-                                     rel, rel_count, rel_progbits,
+                                     rel, rel_count, progbits_shdr,
                                      sym, sym_count,
                                      strtab);
             if (ret < 0)
