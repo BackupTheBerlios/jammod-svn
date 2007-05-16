@@ -203,9 +203,10 @@ int elf_relocate(unsigned char *data, address_t offset) {
 address_t elf_get_symbol(unsigned char *data, address_t offset,
                          const char *name, unsigned char type) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    Elf32_Shdr *sechdrs;
-    Elf32_Half i;
+    Elf32_Shdr *sechdrs, *symtab = NULL;
     char *strtab = NULL;
+    unsigned i, sym_count;
+    const Elf32_Sym *sym;
 
     /* verify ELF header */
     if (memcmp(hdr->e_ident, ELFMAG, SELFMAG) != 0 ||
@@ -218,40 +219,36 @@ address_t elf_get_symbol(unsigned char *data, address_t offset,
 
     sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
 
-    /* find strtab */
+    /* find strtab and symtab */
+
     for (i = 0; i < hdr->e_shnum; i++) {
         Elf32_Shdr *shdr = sechdrs + i;
         if (shdr->sh_type == SHT_STRTAB)
             strtab = (char*)(data + shdr->sh_offset);
+        else if (shdr->sh_type == SHT_SYMTAB)
+            symtab = shdr;
     }
 
-    if (strtab == NULL)
+    if (strtab == NULL || symtab == NULL)
         return 0;
 
-    /* for each SYMTAB */
-    for (i = 0; i < hdr->e_shnum; i++) {
-        Elf32_Shdr *shdr = sechdrs + i, *shdr2;
-        if (shdr->sh_type == SHT_SYMTAB) {
-            /* find symbol in this SYMTAB */
-            Elf32_Sym *sym = (Elf32_Sym*)(data + shdr->sh_offset);
-            unsigned j, sym_count = shdr->sh_size / sizeof(*sym);
+    /* look for symbol in symtab */
 
-            for (j = 0; j < sym_count; j++, sym++) {
-                if (ELF32_ST_TYPE(sym->st_info) != type)
-                    continue;
-                if (strcmp(strtab + sym->st_name, name) != 0)
-                    continue;
+    sym = (const Elf32_Sym*)(data + symtab->sh_offset);
+    sym_count = symtab->sh_size / sizeof(*sym);
 
-                if (sym->st_shndx >= hdr->e_shnum) {
-                    fprintf(stderr, "sym->st_shndx out of bounds\n");
-                    return 0;
-                }
-                shdr2 = (Elf32_Shdr*)(data + hdr->e_shoff +
-                                      sym->st_shndx * hdr->e_shentsize);
+    for (i = 0; i < sym_count; i++, sym++) {
+        if (ELF32_ST_TYPE(sym->st_info) != type)
+            continue;
+        if (strcmp(strtab + sym->st_name, name) != 0)
+            continue;
 
-                return offset + shdr2->sh_offset + sym->st_value;
-            }
+        if (sym->st_shndx >= hdr->e_shnum) {
+            fprintf(stderr, "sym->st_shndx out of bounds\n");
+            return 0;
         }
+
+        return offset + sechdrs[sym->st_shndx].sh_offset + sym->st_value;
     }
 
     return 0;
