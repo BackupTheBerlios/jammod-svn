@@ -1,5 +1,7 @@
 v1.1 - not yet released
   - initialize local variables correctly, fixes compiler warnings
+  - fixed printf warning due to size_t parameter        
+  - use constant pointers whenever possible in the linker code
 
 
 v1.0 - 17 Jan 2004
