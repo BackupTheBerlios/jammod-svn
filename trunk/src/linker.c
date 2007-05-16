@@ -40,7 +40,7 @@
 
 static int relocate_rel(unsigned char *data, address_t offset,
                         const Elf32_Rel *rel,
-                        Elf32_Shdr *rel_progbits,
+                        const Elf32_Shdr *rel_progbits,
                         const Elf32_Sym *sym,
                         const char *strtab) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
@@ -112,7 +112,7 @@ static int relocate_rel(unsigned char *data, address_t offset,
 
 static int relocate_rel_array(unsigned char *data, address_t offset,
                               const Elf32_Rel *rel, unsigned rel_count,
-                              Elf32_Shdr *rel_progbits,
+                              const Elf32_Shdr *rel_progbits,
                               const Elf32_Sym *sym, unsigned sym_count,
                               const char *strtab) {
     int ret;
@@ -136,12 +136,12 @@ static int relocate_rel_array(unsigned char *data, address_t offset,
 
 int elf_relocate(unsigned char *data, address_t offset) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    Elf32_Shdr *sechdrs, *progbits_shdr = NULL, *rel_progbits;
+    const Elf32_Shdr *sechdrs, *progbits_shdr = NULL, *rel_progbits;
     Elf32_Half i;
     Elf32_Rel *rel = NULL;
-    Elf32_Sym *sym = NULL;
+    const Elf32_Sym *sym = NULL;
     unsigned rel_count, sym_count = 0;
-    char *strtab = NULL;
+    const char *strtab = NULL;
     int ret;
 
     /* verify ELF header */
@@ -158,20 +158,20 @@ int elf_relocate(unsigned char *data, address_t offset) {
     sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
 
     for (i = 0; i < hdr->e_shnum; i++) {
-        Elf32_Shdr *shdr = sechdrs + i;
+        const Elf32_Shdr *shdr = sechdrs + i;
         switch (shdr->sh_type) {
         case SHT_SYMTAB:
-            sym = (Elf32_Sym*)(data + shdr->sh_offset);
+            sym = (const Elf32_Sym*)(data + shdr->sh_offset);
             sym_count = shdr->sh_size / sizeof(*sym);
             break;
         case SHT_STRTAB:
-            strtab = (char*)(data + shdr->sh_offset);
+            strtab = (const char*)(data + shdr->sh_offset);
             break;
         }
     }
 
     for (i = 0; i < hdr->e_shnum; i++) {
-        Elf32_Shdr *shdr = sechdrs + i;
+        const Elf32_Shdr *shdr = sechdrs + i;
         switch (shdr->sh_type) {
         case SHT_PROGBITS:
             progbits_shdr = shdr;
