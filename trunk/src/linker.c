@@ -43,7 +43,7 @@ static int relocate_rel(unsigned char *data, address_t offset,
                         const Elf32_Shdr *rel_progbits,
                         const Elf32_Sym *sym,
                         const char *strtab) {
-    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    const Elf32_Ehdr *hdr = (const struct elf32_hdr*)data;
     const Elf32_Shdr *sechdrs = (const Elf32_Shdr*)(data + hdr->e_shoff);
     address_t address = rel_progbits->sh_offset + rel->r_offset;
     address_t *p = (address_t*)(data + address);
@@ -130,10 +130,10 @@ static int relocate_rel_array(unsigned char *data, address_t offset,
 }
 
 int elf_relocate(unsigned char *data, address_t offset) {
-    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
+    const Elf32_Ehdr *hdr = (const struct elf32_hdr*)data;
     const Elf32_Shdr *sechdrs, *progbits_shdr = NULL;
     Elf32_Half i;
-    Elf32_Rel *rel = NULL;
+    const Elf32_Rel *rel = NULL;
     const Elf32_Sym *sym = NULL;
     unsigned rel_count, sym_count = 0;
     const char *strtab = NULL;
@@ -150,7 +150,7 @@ int elf_relocate(unsigned char *data, address_t offset) {
         return -1;
     }
 
-    sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
+    sechdrs = (const Elf32_Shdr*)(data + hdr->e_shoff);
 
     /* find strtab and symtab */
 
@@ -183,7 +183,7 @@ int elf_relocate(unsigned char *data, address_t offset) {
                 continue;
             }
                 
-            rel = (Elf32_Rel*)(data + shdr->sh_offset);
+            rel = (const Elf32_Rel*)(data + shdr->sh_offset);
             rel_count = shdr->sh_size / sizeof(*rel);
 
             ret = relocate_rel_array(data, offset,
