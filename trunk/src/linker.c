@@ -200,11 +200,11 @@ int elf_relocate(unsigned char *data, address_t offset) {
     return 0;
 }
 
-address_t elf_get_symbol(unsigned char *data, address_t offset,
+address_t elf_get_symbol(const unsigned char *data, address_t offset,
                          const char *name, unsigned char type) {
-    Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
-    Elf32_Shdr *sechdrs, *symtab = NULL;
-    char *strtab = NULL;
+    const Elf32_Ehdr *hdr = (const struct elf32_hdr*)data;
+    const Elf32_Shdr *sechdrs, *symtab = NULL;
+    const char *strtab = NULL;
     unsigned i, sym_count;
     const Elf32_Sym *sym;
 
@@ -217,16 +217,15 @@ address_t elf_get_symbol(unsigned char *data, address_t offset,
         hdr->e_shentsize != sizeof(*sechdrs))
         return 0;
 
-    sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
+    sechdrs = (const Elf32_Shdr*)(data + hdr->e_shoff);
 
     /* find strtab and symtab */
 
     for (i = 0; i < hdr->e_shnum; i++) {
-        Elf32_Shdr *shdr = sechdrs + i;
-        if (shdr->sh_type == SHT_STRTAB)
-            strtab = (char*)(data + shdr->sh_offset);
-        else if (shdr->sh_type == SHT_SYMTAB)
-            symtab = shdr;
+        if (sechdrs[i].sh_type == SHT_STRTAB)
+            strtab = (const char*)(data + sechdrs[i].sh_offset);
+        else if (sechdrs[i].sh_type == SHT_SYMTAB)
+            symtab = &sechdrs[i];
     }
 
     if (strtab == NULL || symtab == NULL)
