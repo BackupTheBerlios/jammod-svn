@@ -5,7 +5,7 @@
  * The module linker - relocate an ELF object for insertion to kernel
  * memory.
  *
- * (c) 2003 Max Kellermann (max@linuxtag.org)
+ * (c) 2003-2007 Max Kellermann (max@linuxtag.org)
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -94,13 +94,12 @@ static int relocate_rel(unsigned char *data, address_t offset,
         return -1;
     }
 
-    if (ELF32_R_TYPE(rel->r_info) == R_386_PC32) {
-        /* convert to relative address */
-        value -= offset + address;
-    }
-
     /* relocate it */
-    *p += value;
+
+    apply_relocate(ELF32_R_TYPE(rel->r_info),
+                   value,
+                   p,
+                   offset + address);
 
     return 0;
 }

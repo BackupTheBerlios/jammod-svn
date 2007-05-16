@@ -14,6 +14,6 @@ install: all
 	install -d -m 0755 $(DESTDIR)$(PREFIX)/sbin
 	install -m 0755 jammod $(DESTDIR)$(PREFIX)/sbin
 
-jammod: main.c symbols.c loadfile.c linker.c kmem.c kmalloc.c module.c
+jammod: main.c symbols.c loadfile.c linker.c kmem.c kmalloc.c module.c relocate.c
 	test -f $(KERNEL_HEADERS)/linux/version.h || test -f $(KERNEL_HEADERS)/linux/uts.h
 	$(CC) $(CFLAGS) -o $@ $^

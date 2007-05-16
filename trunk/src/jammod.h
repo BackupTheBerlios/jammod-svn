@@ -41,6 +41,13 @@ int elf_relocate(unsigned char *data, address_t offset);
 address_t elf_get_symbol(const unsigned char *data, address_t offset,
                          const char *name, unsigned char type);
 
+/* relocate.c */
+
+int apply_relocate(unsigned rel_type,
+		   address_t sym_value,
+		   address_t *location,
+		   address_t final_location);
+
 /* symbols.c */
 
 int init_symbols(const char *system_map_path);
