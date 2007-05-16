@@ -137,7 +137,7 @@ static int relocate_rel_array(unsigned char *data, address_t offset,
 int elf_relocate(unsigned char *data, address_t offset) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
     Elf32_Shdr *sechdrs, *progbits_shdr = NULL, *rel_progbits;
-    Elf32_Half z;
+    Elf32_Half i;
     Elf32_Rel *rel = NULL;
     Elf32_Sym *sym = NULL;
     unsigned rel_count, sym_count = 0;
@@ -157,8 +157,8 @@ int elf_relocate(unsigned char *data, address_t offset) {
 
     sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
 
-    for (z = 0; z < hdr->e_shnum; z++) {
-        Elf32_Shdr *shdr = sechdrs + z;
+    for (i = 0; i < hdr->e_shnum; i++) {
+        Elf32_Shdr *shdr = sechdrs + i;
         switch (shdr->sh_type) {
         case SHT_SYMTAB:
             sym = (Elf32_Sym*)(data + shdr->sh_offset);
@@ -170,8 +170,8 @@ int elf_relocate(unsigned char *data, address_t offset) {
         }
     }
 
-    for (z = 0; z < hdr->e_shnum; z++) {
-        Elf32_Shdr *shdr = sechdrs + z;
+    for (i = 0; i < hdr->e_shnum; i++) {
+        Elf32_Shdr *shdr = sechdrs + i;
         switch (shdr->sh_type) {
         case SHT_PROGBITS:
             progbits_shdr = shdr;
@@ -204,7 +204,7 @@ address_t elf_get_symbol(unsigned char *data, address_t offset,
                          const char *name, unsigned char type) {
     Elf32_Ehdr *hdr = (struct elf32_hdr*)data;
     Elf32_Shdr *sechdrs;
-    Elf32_Half z;
+    Elf32_Half i;
     char *strtab = NULL;
 
     /* verify ELF header */
@@ -219,8 +219,8 @@ address_t elf_get_symbol(unsigned char *data, address_t offset,
     sechdrs = (Elf32_Shdr*)(data + hdr->e_shoff);
 
     /* find strtab */
-    for (z = 0; z < hdr->e_shnum; z++) {
-        Elf32_Shdr *shdr = sechdrs + z;
+    for (i = 0; i < hdr->e_shnum; i++) {
+        Elf32_Shdr *shdr = sechdrs + i;
         if (shdr->sh_type == SHT_STRTAB)
             strtab = (char*)(data + shdr->sh_offset);
     }
@@ -229,14 +229,14 @@ address_t elf_get_symbol(unsigned char *data, address_t offset,
         return 0;
 
     /* for each SYMTAB */
-    for (z = 0; z < hdr->e_shnum; z++) {
-        Elf32_Shdr *shdr = sechdrs + z, *shdr2;
+    for (i = 0; i < hdr->e_shnum; i++) {
+        Elf32_Shdr *shdr = sechdrs + i, *shdr2;
         if (shdr->sh_type == SHT_SYMTAB) {
             /* find symbol in this SYMTAB */
             Elf32_Sym *sym = (Elf32_Sym*)(data + shdr->sh_offset);
-            unsigned z2, sym_count = shdr->sh_size / sizeof(*sym);
+            unsigned j, sym_count = shdr->sh_size / sizeof(*sym);
 
-            for (z2 = 0; z2 < sym_count; z2++, sym++) {
+            for (j = 0; j < sym_count; j++, sym++) {
                 if (ELF32_ST_TYPE(sym->st_info) != type)
                     continue;
                 if (strcmp(strtab + sym->st_name, name) != 0)
